@@ -1,31 +1,39 @@
-require('dotenv').config(); // טוען את משתני הסביבה מתוך קובץ .env
+require('dotenv').config(); 4
 
 const https = require('https');
 const fs = require('fs');
 const httpProxy = require('http-proxy');
 
 
-// יצירת אובייקט פרוקסי
 const proxy = httpProxy.createProxyServer({});
+proxy.on('proxyRes', (proxyRes, req, res) => {
+  let data = '';
 
-// קריאה למשתני הסביבה מתוך קובץ ה- .env
+  proxyRes
+    .on('data', (chunk) => {
+      data += chunk;
+    })
+    .on('end', () => {
+      console.log("proxyRes.on('end'). data:", data);
+    })
+    .on('error', (err) => {
+      console.error("proxyRes.on('err'). error:", err);
+    });
+});
+
 const sslOptions = {
-  key: fs.readFileSync(process.env.SSL_KEY),       // נתיב המפתח הפרטי
-  cert: fs.readFileSync(process.env.SSL_CERT),     // נתיב תעודת ה-SSL
+  key: fs.readFileSync(process.env.SSL_KEY),
+  cert: fs.readFileSync(process.env.SSL_CERT)
 };
 
-// יצירת שרת HTTPS
 https
   .createServer(sslOptions, (req, res) => {
-    // תיעוד הפניות
-    const log = `${req.method}: ${req.url}`
+    const log = `${req.method}: ${req.url}`;
     console.log(log);
-    // הפניית הבקשה לשרת HTTP
     proxy.web(req, res, {
-      target: `${process.env.OLLAMA_SERVER_URL}:${process.env.OLLAMA_SERVER_PORT}`, // הפניית הבקשות לשרת ה-HTTP על פי משתני הסביבה
+      target: `${process.env.REMOTE_SERVER_URL}:${process.env.REMOTE_SERVER_PORT}`,
       changeOrigin: true,
     });
-
   })
   .listen(process.env.LOCAL_PORT, () => {
     console.log(`HTTPS server running on https://${process.env.LOCAL_URL}:${process.env.LOCAL_PORT}`);
